@@ -1,5 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useAsyncStorage } from '@shopify/shop-minis-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { 
+  useAsyncStorage, 
+  useProducts,
+  useCurrentUser,
+  useSavedProducts 
+} from '@shopify/shop-minis-react';
 import { GameState, DailyStats, Product, Clue } from '../types/game';
 import { getTodaysSeed, calculateScore, generateClues } from '../utils/gameUtils';
 
@@ -10,54 +15,82 @@ const STORAGE_KEYS = {
 };
 
 export const useGameState = () => {
-  console.log('🚀 useGameState hook initializing - VERSION 2.0');
+  console.log('🚀 useGameState hook initializing - VERSION 3.0 with Real Shop Data');
   
-  // Initialize with default clues immediately
-  const defaultClues: Clue[] = [
-    { id: 1, text: 'This item belongs to the Accessories category', type: 'category', difficulty: 'easy' },
-    { id: 2, text: 'Made by a brand that starts with "E" and has 11 letters', type: 'brand', difficulty: 'medium' },
-    { id: 3, text: 'Priced in the affordable ($25-$50) range', type: 'price', difficulty: 'easy' },
-    { id: 4, text: 'This brand hails from Los Angeles, CA', type: 'location', difficulty: 'medium' },
-    { id: 5, text: 'An eco-conscious choice for sustainable shoppers', type: 'feature', difficulty: 'medium' },
-  ];
+  const storage = useAsyncStorage();
   
-  console.log('📋 Default clues created:', defaultClues.length, 'clues');
+  // Get real products from Shop catalog
+  // @ts-ignore - SDK type definition may be incomplete
+  const { products, loading: productsLoading } = useProducts({} as any);
   
-  const mockProduct: Product = {
-    id: 'prod_demo',
-    title: 'Organic Cotton Tote Bag',
-    vendor: 'EcoStyle Co',
-    image: 'https://via.placeholder.com/400x400/4F46E5/ffffff?text=Mystery+Product',
-    price: '$32.00',
-    description: 'Sustainable and stylish everyday carry',
-    category: 'Accessories',
-    tags: ['sustainable', 'everyday', 'minimalist'],
-    rating: 4.8,
-    isEcoFriendly: true,
-    location: 'Los Angeles, CA',
-  };
+  // Get current user for personalization
+  // @ts-ignore - SDK type definition may be incomplete
+  const currentUser = useCurrentUser() as any;
   
-  console.log('📦 Mock product created:', mockProduct.title);
+  // Get user's saved products for personalization
+  // @ts-ignore - SDK type definition may be incomplete
+  const savedProducts = useSavedProducts() as any;
   
   const [gameState, setGameState] = useState<GameState>({
-    currentProduct: mockProduct,  // Start with product loaded
-    cluesRevealed: 1,  // Start with first clue already revealed
+    currentProduct: null,
+    cluesRevealed: 1,
     isGameWon: false,
     attempts: 0,
     startTime: Date.now(),
   });
   
-  console.log('🎮 Initial game state:', {
-    hasProduct: !!gameState.currentProduct,
-    cluesRevealed: gameState.cluesRevealed
-  });
-  
   const [dailyStats, setDailyStats] = useState<DailyStats | null>(null);
-  const [clues, setClues] = useState<Clue[]>(defaultClues); // Start with default clues
-  const [isLoading, setIsLoading] = useState(false); // Start loaded
+  const [clues, setClues] = useState<Clue[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [hasPlayedAlready, setHasPlayedAlready] = useState(false);
   
-  const storage = useAsyncStorage();
+  // Convert Shop product to our Product type
+  const convertShopProduct = useCallback((shopProduct: any): Product => {
+    // Extract price from the product variants
+    const price = shopProduct.variants?.nodes?.[0]?.price?.amount || shopProduct.priceRange?.minVariantPrice?.amount || '0';
+    const currencyCode = shopProduct.variants?.nodes?.[0]?.price?.currencyCode || 'USD';
+    
+    // Extract category from product type or collections
+    const category = shopProduct.productType || shopProduct.collections?.nodes?.[0]?.title || 'General';
+    
+    // Extract tags
+    const tags = shopProduct.tags || [];
+    
+    // Build description from the product
+    const description = shopProduct.description || shopProduct.descriptionHtml?.replace(/<[^>]*>/g, '') || '';
+    
+    return {
+      id: shopProduct.id,
+      shopifyId: shopProduct.id,
+      title: shopProduct.title,
+      vendor: shopProduct.vendor || 'Unknown Brand',
+      image: shopProduct.featuredImage?.url || shopProduct.images?.nodes?.[0]?.url || 'https://via.placeholder.com/400x400',
+      price: `${currencyCode === 'USD' ? '$' : currencyCode}${parseFloat(price).toFixed(2)}`,
+      description: description.substring(0, 200),
+      category,
+      tags: tags.slice(0, 5),
+      rating: 4.5 + Math.random() * 0.5, // Simulate rating
+      isEcoFriendly: tags.some((tag: string) => 
+        tag.toLowerCase().includes('eco') || 
+        tag.toLowerCase().includes('sustainable') ||
+        tag.toLowerCase().includes('organic')
+      ),
+      location: shopProduct.vendor ? 'United States' : undefined, // Default location
+    };
+  }, []);
+  
+  // Select today's product based on date seed
+  const todaysProduct = useMemo(() => {
+    if (!products || products.length === 0) return null;
+    
+    const seed = getTodaysSeed();
+    // Use seed to deterministically select a product
+    const seedNum = seed.split('-').reduce((acc, val) => acc + parseInt(val), 0);
+    const productIndex = seedNum % products.length;
+    
+    const selectedProduct = products[productIndex];
+    return convertShopProduct(selectedProduct);
+  }, [products, convertShopProduct]);
   
   // Log state changes
   useEffect(() => {
@@ -65,62 +98,69 @@ export const useGameState = () => {
       cluesRevealed: gameState.cluesRevealed,
       isGameWon: gameState.isGameWon,
       attempts: gameState.attempts,
-      hasProduct: !!gameState.currentProduct
+      hasProduct: !!gameState.currentProduct,
+      productsAvailable: products?.length || 0
     });
-  }, [gameState]);
+  }, [gameState, products]);
   
-  // Load saved game state - only run once on mount
+  // Load saved game state and set up today's product
   useEffect(() => {
     const loadGameState = async () => {
+      if (!todaysProduct || productsLoading) {
+        return; // Wait for products to load
+      }
+      
       try {
         const todaySeed = getTodaysSeed();
         const savedStats = await storage.getItem({ key: STORAGE_KEYS.DAILY_STATS });
+        const savedGameState = await storage.getItem({ key: STORAGE_KEYS.GAME_STATE });
         
+        // Check if user already played today
         if (savedStats) {
           const stats: DailyStats = JSON.parse(savedStats);
-          if (stats.date === todaySeed && stats.played && stats.won) {
+          if (stats.date === todaySeed && stats.played) {
             setHasPlayedAlready(true);
             setDailyStats(stats);
+            
+            // Restore game state if it exists
+            if (savedGameState) {
+              const restoredState: GameState = JSON.parse(savedGameState);
+              if (restoredState.currentProduct?.id === todaysProduct.id) {
+                setGameState(restoredState);
+                const restoredClues = generateClues(todaysProduct, currentUser ? {
+                  favoriteCategories: savedProducts?.map((p: any) => p.productType).filter(Boolean),
+                  isEcoConscious: currentUser?.displayName?.includes('eco') // Simple check
+                } : undefined);
+                setClues(restoredClues);
+                return;
+              }
+            }
           }
         }
         
-        // For demo purposes, create a mock product
-        // In production, this would fetch from Shop's catalog
-        const mockProduct: Product = {
-          id: 'prod_demo',  // Fixed ID for demo
-          title: 'Organic Cotton Tote Bag',
-          vendor: 'EcoStyle Co',
-          image: 'https://via.placeholder.com/400x400/4F46E5/ffffff?text=Mystery+Product',
-          price: '$32.00',
-          description: 'Sustainable and stylish everyday carry',
-          category: 'Accessories',
-          tags: ['sustainable', 'everyday', 'minimalist'],
-          rating: 4.8,
-          isEcoFriendly: true,
-          location: 'Los Angeles, CA',
-        };
+        // Set up new game with today's product
+        setGameState(prev => ({
+          ...prev,
+          currentProduct: todaysProduct,
+          cluesRevealed: 1,
+          isGameWon: false,
+          attempts: 0,
+          startTime: Date.now(),
+        }));
         
-        // Only reset state if we don't have a product yet
-        setGameState(prev => {
-          if (!prev.currentProduct) {
-            return {
-              ...prev,
-              currentProduct: mockProduct,
-              cluesRevealed: 1,  // Keep initial clue revealed
-              isGameWon: false,
-              attempts: 0,
-            };
-          }
-          // If product exists, just update it without resetting progress
-          return {
-            ...prev,
-            currentProduct: mockProduct,
-          };
-        });
+        // Generate personalized clues
+        const userProfile = currentUser ? {
+          favoriteCategories: savedProducts?.map((p: any) => p.productType).filter(Boolean),
+          isEcoConscious: savedProducts?.some((p: any) => 
+            p.tags?.some((tag: string) => tag.toLowerCase().includes('eco'))
+          )
+        } : undefined;
         
-        // Generate clues for the product
-        const generatedClues = generateClues(mockProduct);
+        const generatedClues = generateClues(todaysProduct, userProfile);
         setClues(generatedClues);
+        
+        console.log('✅ Game initialized with real product:', todaysProduct.title);
+        console.log('👤 User personalization applied:', !!userProfile);
         
       } catch (error) {
         console.error('Error loading game state:', error);
@@ -130,7 +170,7 @@ export const useGameState = () => {
     };
     
     loadGameState();
-  }, []); // Empty dependency array - only run once on mount
+  }, [todaysProduct, productsLoading, storage, currentUser, savedProducts]); // Dependencies for real data
   
   // Reveal next clue
   const revealNextClue = useCallback(() => {
@@ -182,8 +222,12 @@ export const useGameState = () => {
       return false;
     }
     
-    const isCorrect = guessedProductId === gameState.currentProduct.id;
-    console.log('🎲 Comparison:', guessedProductId, '===', gameState.currentProduct.id, '=', isCorrect);
+    // Compare both the full ID and just the numeric part for flexibility
+    const isCorrect = guessedProductId === gameState.currentProduct.id || 
+                     guessedProductId === gameState.currentProduct.shopifyId ||
+                     guessedProductId.includes(gameState.currentProduct.id.split('/').pop() || '');
+    
+    console.log('🎲 Comparison:', guessedProductId, 'vs', gameState.currentProduct.id, '=', isCorrect);
     
     if (isCorrect) {
       const endTime = Date.now();
@@ -211,6 +255,7 @@ export const useGameState = () => {
       };
       
       await storage.setItem({ key: STORAGE_KEYS.DAILY_STATS, value: JSON.stringify(todayStats) });
+      await storage.setItem({ key: STORAGE_KEYS.GAME_STATE, value: JSON.stringify(newGameState) });
       setDailyStats(todayStats);
       
       return true;

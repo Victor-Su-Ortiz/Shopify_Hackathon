@@ -11,6 +11,8 @@ interface ProductRevealProps {
   timeToSolve?: number;
   onShare: () => void;
   onPlayAgain: () => void;
+  onAddToCart?: () => void;
+  onSaveProduct?: () => void;
 }
 
 export const ProductReveal: React.FC<ProductRevealProps> = ({
@@ -19,7 +21,9 @@ export const ProductReveal: React.FC<ProductRevealProps> = ({
   score,
   attempts,
   timeToSolve,
-  onShare
+  onShare,
+  onAddToCart,
+  onSaveProduct
 }) => {
   const [showConfetti, setShowConfetti] = useState(false);
   const shopNavigation = useShopNavigation();
@@ -238,6 +242,28 @@ export const ProductReveal: React.FC<ProductRevealProps> = ({
               <span>🛍️</span> View in Shop
             </button>
           </div>
+          
+          {/* Commerce Actions Row */}
+          {(onAddToCart || onSaveProduct) && (
+            <div className="flex gap-3 mt-3">
+              {onAddToCart && (
+                <button
+                  onClick={onAddToCart}
+                  className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-black rounded-2xl px-6 py-3 hover:from-blue-600 hover:to-blue-700 transition-all flex items-center justify-center gap-2"
+                >
+                  <span>🛒</span> Add to Cart
+                </button>
+              )}
+              {onSaveProduct && (
+                <button
+                  onClick={onSaveProduct}
+                  className="flex-1 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-black rounded-2xl px-6 py-3 hover:from-purple-600 hover:to-purple-700 transition-all flex items-center justify-center gap-2"
+                >
+                  <span>💜</span> Save for Later
+                </button>
+              )}
+            </div>
+          )}
           
           {/* Fun achievement badges */}
           <div className="mt-6 flex flex-wrap gap-2 justify-center">

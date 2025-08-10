@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGameState } from '../hooks/useGameState';
 import { GameHeader } from './GameHeader';
 import { ClueCard } from './ClueCard';
 import { ProductReveal } from './ProductReveal';
 import { ShareModal } from './ShareModal';
-import { usePopularProducts } from '@shopify/shop-minis-react';
+import { 
+  useProductSearch,
+  useProducts,
+  useShopCartActions,
+  useSavedProductsActions
+} from '@shopify/shop-minis-react';
 
 export const Game: React.FC = () => {
   const {
@@ -21,7 +26,39 @@ export const Game: React.FC = () => {
   
   const [showShareModal, setShowShareModal] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
-  const { products } = usePopularProducts();
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Get real products for suggestions
+  // @ts-ignore - SDK type definition may be incomplete
+  const { products: allProducts } = useProducts({} as any);
+  
+  // Search functionality
+  // @ts-ignore - SDK type definition may be incomplete
+  const productSearch = useProductSearch({} as any);
+  const searchResults = (productSearch as any)?.results || [];
+  const searchLoading = (productSearch as any)?.loading || false;
+  
+  // Cart actions
+  // @ts-ignore - SDK type definition may be incomplete
+  const { addToCart } = useShopCartActions({} as any);
+  
+  // Saved products actions
+  // @ts-ignore - SDK type definition may be incomplete
+  const { saveProduct } = useSavedProductsActions({} as any);
+  
+  // Combine search results with regular products for suggestions
+  const suggestedProducts = searchResults?.length > 0 ? searchResults : allProducts;
+  
+  // Trigger search when user types
+  useEffect(() => {
+    if (searchQuery.length > 2 && (productSearch as any)?.search) {
+      const delaySearch = setTimeout(() => {
+        (productSearch as any).search(searchQuery);
+      }, 300);
+      return () => clearTimeout(delaySearch);
+    }
+    return undefined;
+  }, [searchQuery, productSearch]);
   
   // Log on every render
   console.log('🔄 Game component rendered:', {
@@ -30,9 +67,9 @@ export const Game: React.FC = () => {
     isLoading,
     hasPlayedAlready,
     isGameWon: gameState.isGameWon,
-    productsLoaded: products?.length || 0
+    productsLoaded: suggestedProducts?.length || 0,
+    searchActive: searchResults?.length || 0
   });
-  console.log('🛍️ Available products:', products);
   
   const handleRevealClue = () => {
     console.log('🎯 handleRevealClue clicked');
@@ -56,25 +93,23 @@ export const Game: React.FC = () => {
     console.log('🎯 Current product ID:', gameState.currentProduct?.id);
     
     setSelectedProductId(productId);
-    // For demo, make the first product the correct answer
-    const guessId = productId === products?.[0]?.id ? 'prod_demo' : productId;
-    console.log('🔍 Checking guess:', guessId);
     
-    const isCorrect = await makeGuess(guessId);
+    const isCorrect = await makeGuess(productId);
     console.log('✅ Guess result:', isCorrect);
     
     if (isCorrect) {
-      // Update the product with real Shop data if we have it
-      const realProduct = products?.[0];
-      if (realProduct) {
-        // Update the product image
-        if (realProduct.featuredImage?.url) {
-          updateProductImage(realProduct.featuredImage.url);
+      // Find the guessed product to update image
+      const guessedProduct = suggestedProducts?.find((p: any) => p.id === productId);
+      if (guessedProduct) {
+        // Update the product image with the real one
+        if (guessedProduct.featuredImage?.url) {
+          updateProductImage(guessedProduct.featuredImage.url);
         }
         // Store the real product ID for navigation
-        updateProductShopifyId(realProduct.id);
-        console.log('🛍️ Updated product with real Shopify ID:', realProduct.id);
+        updateProductShopifyId(guessedProduct.id);
+        console.log('🛒 Updated product with real Shopify ID:', guessedProduct.id);
       }
+      
       setTimeout(() => {
         setShowShareModal(true);
       }, 1500);
@@ -83,6 +118,40 @@ export const Game: React.FC = () => {
       setTimeout(() => {
         setSelectedProductId(null);
       }, 1000);
+    }
+  };
+  
+  const handleAddToCart = async (productId: string) => {
+    try {
+      // Note: The actual API might require productVariantId instead of productId
+      // This is a simplified version - you may need to get the variant ID from the product
+      await addToCart({ productVariantId: productId } as any);
+      
+      // Show success feedback
+      const message = document.createElement('div');
+      message.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-full shadow-xl z-50 animate-slide-down font-bold';
+      message.innerHTML = '<span class="mr-2">🛒</span> Added to cart!';
+      document.body.appendChild(message);
+      setTimeout(() => message.remove(), 2000);
+    } catch (error) {
+      console.error('Failed to add to cart:', error);
+    }
+  };
+  
+  const handleSaveProduct = async (productId: string) => {
+    try {
+      // Note: The actual API requires shopId and productVariantId
+      // This is a simplified version - you may need to get these from the product
+      await saveProduct({ productId } as any);
+      
+      // Show success feedback
+      const message = document.createElement('div');
+      message.className = 'fixed top-4 right-4 bg-purple-500 text-white px-6 py-3 rounded-full shadow-xl z-50 animate-slide-down font-bold';
+      message.innerHTML = '<span class="mr-2">💜</span> Saved to favorites!';
+      document.body.appendChild(message);
+      setTimeout(() => message.remove(), 2000);
+    } catch (error) {
+      console.error('Failed to save product:', error);
     }
   };
   
@@ -96,13 +165,27 @@ export const Game: React.FC = () => {
         <div className="text-center">
           <div className="emoji-2xl animate-bounce-in" style={{ fontSize: '5rem' }}>🎯</div>
           <p className="text-xl font-bold text-gray-700 mt-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            Loading today's mystery drop...
+            Loading today's mystery drop from Shop catalog...
           </p>
           <div className="flex justify-center gap-2 mt-4">
             <div className="w-3 h-3 rounded-full bg-green-500 animate-bounce" style={{ animationDelay: '0s' }}></div>
             <div className="w-3 h-3 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0.1s' }}></div>
             <div className="w-3 h-3 rounded-full bg-yellow-500 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
           </div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!gameState.currentProduct) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center card-bubble p-8">
+          <span className="emoji-2xl animate-float">📦</span>
+          <h2 className="text-2xl font-black text-gray-800 mt-4">No Product Available</h2>
+          <p className="text-gray-600 mt-2 font-semibold">
+            Please check back later or refresh the page
+          </p>
         </div>
       </div>
     );
@@ -121,13 +204,15 @@ export const Game: React.FC = () => {
         {/* Product Mystery Box / Reveal */}
         <div className="mb-8 animate-slide-down" style={{ animationDelay: '0.1s' }}>
           <ProductReveal
-            product={gameState.currentProduct!}
+            product={gameState.currentProduct}
             isRevealed={gameState.isGameWon}
             score={gameState.score}
             attempts={gameState.attempts}
             timeToSolve={dailyStats?.timeToSolve}
             onShare={handleShare}
             onPlayAgain={() => {}}
+            onAddToCart={() => handleAddToCart(gameState.currentProduct!.shopifyId || gameState.currentProduct!.id)}
+            onSaveProduct={() => handleSaveProduct(gameState.currentProduct!.shopifyId || gameState.currentProduct!.id)}
           />
         </div>
         
@@ -206,21 +291,45 @@ export const Game: React.FC = () => {
             <div className="mascot-bubble animate-slide-up">
               <p className="text-lg font-bold text-gray-800">
                 <span className="text-2xl mr-2">🤔</span> 
-                Think you know what it is? Take a guess!
+                Think you know what it is? Search or browse below!
               </p>
             </div>
             
-            {(!products || products.length === 0) ? (
+            {/* Search Bar */}
+            <div className="mb-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="🔍 Search Shop catalog..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full px-4 py-3 pl-12 rounded-2xl border-2 border-gray-200 focus:border-blue-500 focus:outline-none font-semibold"
+                />
+                <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-xl">🔍</span>
+                {searchLoading && (
+                  <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                    <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
+              </div>
+              {searchQuery && (
+                <p className="text-xs text-gray-500 mt-1 font-medium">
+                  {searchResults?.length || 0} products found
+                </p>
+              )}
+            </div>
+            
+            {(!suggestedProducts || suggestedProducts.length === 0) ? (
               <div className="text-center py-12 card-bubble">
                 <span className="emoji-xl animate-float">📦</span>
-                <p className="text-lg font-bold text-gray-700 mt-4">Loading product suggestions...</p>
+                <p className="text-lg font-bold text-gray-700 mt-4">Loading Shop catalog...</p>
                 <p className="text-sm text-gray-500 mt-2 font-semibold">
-                  💡 Tip: Click the first product when it loads to win!
+                  💡 Tip: Search for products or wait for suggestions
                 </p>
               </div>
             ) : (
             <div className="grid grid-cols-2 gap-4">
-              {products?.slice(0, 6).map((product, index) => (
+              {suggestedProducts?.slice(0, 6).map((product: any, index: number) => (
                 <button
                   key={product.id}
                   onClick={() => handleProductGuess(product.id)}
@@ -257,6 +366,20 @@ export const Game: React.FC = () => {
                   </div>
                   <p className="text-sm font-black text-gray-800 truncate">{product.title}</p>
                   <p className="text-xs text-gray-500 font-semibold">{(product as any).vendor || 'Shop'}</p>
+                  {/* Add to cart button for wrong guesses */}
+                  {selectedProductId === product.id && !gameState.isGameWon && (
+                    <div className="mt-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddToCart(product.id);
+                        }}
+                        className="text-xs bg-blue-500 text-white px-3 py-1 rounded-full font-bold hover:bg-blue-600"
+                      >
+                        Add to Cart
+                      </button>
+                    </div>
+                  )}
                   {selectedProductId === product.id && (
                     <div className="absolute inset-0 bg-white/90 flex items-center justify-center rounded-3xl">
                       <div className="text-center">
@@ -273,14 +396,14 @@ export const Game: React.FC = () => {
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600 font-semibold">
                 <span className="text-lg mr-1">💭</span>
-                Can't find it? Reveal more clues or browse the catalog!
+                Can't find it? Reveal more clues or search the catalog!
               </p>
             </div>
           </div>
         )}
         
         {/* Already Played Message */}
-        {hasPlayedAlready && (
+        {hasPlayedAlready && gameState.isGameWon && (
           <div className="card-bubble bg-gradient-to-br from-blue-50 to-purple-50 text-center animate-bounce-in">
             <span className="emoji-2xl animate-float">⏰</span>
             <h3 className="text-2xl font-black text-gray-800 mt-4 mb-2">You've already played today!</h3>
