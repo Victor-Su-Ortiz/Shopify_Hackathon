@@ -92,18 +92,25 @@ export const Game: React.FC = () => {
   
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="text-6xl mb-4 animate-bounce">🎯</div>
-          <p className="text-lg font-semibold text-gray-700">Loading today's mystery drop...</p>
+          <div className="emoji-2xl animate-bounce-in" style={{ fontSize: '5rem' }}>🎯</div>
+          <p className="text-xl font-bold text-gray-700 mt-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            Loading today's mystery drop...
+          </p>
+          <div className="flex justify-center gap-2 mt-4">
+            <div className="w-3 h-3 rounded-full bg-green-500 animate-bounce" style={{ animationDelay: '0s' }}></div>
+            <div className="w-3 h-3 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+            <div className="w-3 h-3 rounded-full bg-yellow-500 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+          </div>
         </div>
       </div>
     );
   }
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-4">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-white">
+      <div className="max-w-2xl mx-auto p-4 pb-20">
         <GameHeader
           streak={dailyStats?.streak || 0}
           todayPlayed={!hasPlayedAlready}
@@ -112,7 +119,7 @@ export const Game: React.FC = () => {
         />
         
         {/* Product Mystery Box / Reveal */}
-        <div className="mb-6">
+        <div className="mb-8 animate-slide-down" style={{ animationDelay: '0.1s' }}>
           <ProductReveal
             product={gameState.currentProduct!}
             isRevealed={gameState.isGameWon}
@@ -126,9 +133,17 @@ export const Game: React.FC = () => {
         
         {/* Clues Section */}
         {!gameState.isGameWon && (
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold">Clues ({gameState.cluesRevealed}/{clues.length})</h2>
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <span className="emoji-lg animate-float">🔮</span>
+                <div>
+                  <h2 className="text-2xl font-black text-gray-800">Mystery Clues</h2>
+                  <p className="text-sm text-gray-600 font-semibold">
+                    {gameState.cluesRevealed}/{clues.length} revealed
+                  </p>
+                </div>
+              </div>
               {gameState.cluesRevealed < clues.length && (
                 <button
                   onClick={() => {
@@ -139,14 +154,33 @@ export const Game: React.FC = () => {
                     });
                     handleRevealClue();
                   }}
-                  className="bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors flex items-center gap-2"
+                  className="btn-warning animate-wiggle-hover"
+                  style={{
+                    padding: '14px 28px',
+                    fontSize: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
                 >
-                  <span>🔍</span> Reveal Next Clue
+                  <span style={{ fontSize: '20px' }}>💡</span> 
+                  <span className="font-black">Reveal Clue</span>
                 </button>
               )}
             </div>
             
-            <div className="space-y-2">
+            {/* Progress bar */}
+            <div className="progress-bar mb-6" style={{ height: '20px' }}>
+              <div 
+                className="progress-fill" 
+                style={{ 
+                  '--progress': `${(gameState.cluesRevealed / clues.length) * 100}%`,
+                  width: `${(gameState.cluesRevealed / clues.length) * 100}%`
+                } as React.CSSProperties}
+              />
+            </div>
+            
+            <div className="space-y-3">
               {clues.map((clue, index) => {
                 console.log(`🗺️ Mapping clue ${index + 1}:`, {
                   shouldReveal: index < gameState.cluesRevealed,
@@ -168,32 +202,43 @@ export const Game: React.FC = () => {
         
         {/* Product Guessing Section */}
         {!gameState.isGameWon && gameState.cluesRevealed > 0 && (
-          <div className="mb-6">
-            <h2 className="text-lg font-bold mb-4">Make Your Guess</h2>
+          <div className="mb-8">
+            <div className="mascot-bubble animate-slide-up">
+              <p className="text-lg font-bold text-gray-800">
+                <span className="text-2xl mr-2">🤔</span> 
+                Think you know what it is? Take a guess!
+              </p>
+            </div>
+            
             {(!products || products.length === 0) ? (
-              <div className="text-center py-8">
-                <p className="text-gray-600">Loading product suggestions...</p>
-                <p className="text-sm text-gray-500 mt-2">
-                  (For demo: Click the first product when it loads to win!)
+              <div className="text-center py-12 card-bubble">
+                <span className="emoji-xl animate-float">📦</span>
+                <p className="text-lg font-bold text-gray-700 mt-4">Loading product suggestions...</p>
+                <p className="text-sm text-gray-500 mt-2 font-semibold">
+                  💡 Tip: Click the first product when it loads to win!
                 </p>
               </div>
             ) : (
-            <div className="grid grid-cols-2 gap-3">
-              {products?.slice(0, 6).map((product) => (
+            <div className="grid grid-cols-2 gap-4">
+              {products?.slice(0, 6).map((product, index) => (
                 <button
                   key={product.id}
                   onClick={() => handleProductGuess(product.id)}
                   disabled={gameState.isGameWon}
                   className={`
-                    p-3 rounded-lg border-2 transition-all overflow-hidden
+                    card-bubble p-4 transition-all overflow-hidden relative
                     ${selectedProductId === product.id 
-                      ? 'border-purple-600 bg-purple-50 ring-2 ring-purple-400' 
-                      : 'border-gray-200 bg-white hover:border-purple-400'
+                      ? 'animate-wiggle border-4 border-green-500 bg-green-50' 
+                      : 'hover:scale-105 hover:shadow-xl bg-white'
                     }
                     ${gameState.isGameWon ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                   `}
+                  style={{ 
+                    animationDelay: `${index * 0.05}s`,
+                    animation: selectedProductId === product.id ? 'wiggle 0.5s ease-in-out' : undefined
+                  }}
                 >
-                  <div className="aspect-square bg-gray-100 rounded mb-2 overflow-hidden">
+                  <div className="aspect-square bg-gray-100 rounded-2xl mb-3 overflow-hidden">
                     {(product as any).featuredImage?.url ? (
                       <img 
                         src={(product as any).featuredImage.url}
@@ -205,16 +250,19 @@ export const Game: React.FC = () => {
                         }}
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        <span className="text-3xl">🛒</span>
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                        <span className="emoji-xl opacity-50">🛍️</span>
                       </div>
                     )}
                   </div>
-                  <p className="text-sm font-medium truncate">{product.title}</p>
-                  <p className="text-xs text-gray-600">{(product as any).vendor || 'Shop'}</p>
+                  <p className="text-sm font-black text-gray-800 truncate">{product.title}</p>
+                  <p className="text-xs text-gray-500 font-semibold">{(product as any).vendor || 'Shop'}</p>
                   {selectedProductId === product.id && (
-                    <div className="mt-2 text-xs text-purple-600 font-semibold">
-                      Checking...
+                    <div className="absolute inset-0 bg-white/90 flex items-center justify-center rounded-3xl">
+                      <div className="text-center">
+                        <span className="emoji-lg animate-bounce">🎲</span>
+                        <p className="text-sm font-black text-gray-700 mt-2">Checking...</p>
+                      </div>
                     </div>
                   )}
                 </button>
@@ -222,8 +270,9 @@ export const Game: React.FC = () => {
             </div>
             )}
             
-            <div className="mt-4 text-center">
-              <p className="text-sm text-gray-600">
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-600 font-semibold">
+                <span className="text-lg mr-1">💭</span>
                 Can't find it? Reveal more clues or browse the catalog!
               </p>
             </div>
@@ -232,40 +281,47 @@ export const Game: React.FC = () => {
         
         {/* Already Played Message */}
         {hasPlayedAlready && (
-          <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6 text-center">
-            <div className="text-4xl mb-2">⏰</div>
-            <h3 className="text-lg font-bold mb-2">You've already played today!</h3>
-            <p className="text-gray-700 mb-4">
+          <div className="card-bubble bg-gradient-to-br from-blue-50 to-purple-50 text-center animate-bounce-in">
+            <span className="emoji-2xl animate-float">⏰</span>
+            <h3 className="text-2xl font-black text-gray-800 mt-4 mb-2">You've already played today!</h3>
+            <p className="text-lg text-gray-700 mb-6 font-semibold">
               Come back tomorrow for a new mystery drop challenge.
             </p>
             <button
               onClick={handleShare}
-              className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors"
+              className="btn-primary"
+              style={{ fontSize: '18px', padding: '14px 32px' }}
             >
-              Share Today's Results
+              <span className="mr-2">🎉</span> Share Today's Results
             </button>
           </div>
         )}
         
         {/* Stats Section */}
-        <div className="bg-white rounded-2xl p-6 shadow-lg">
-          <h3 className="text-lg font-bold mb-4">Your Stats</h3>
-          <div className="grid grid-cols-4 gap-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold">1</p>
-              <p className="text-xs text-gray-600">Games Played</p>
+        <div className="card-bubble animate-slide-up" style={{ animationDelay: '0.3s' }}>
+          <div className="flex items-center gap-3 mb-6">
+            <span className="emoji-lg">📊</span>
+            <h3 className="text-2xl font-black text-gray-800">Your Stats</h3>
+          </div>
+          <div className="grid grid-cols-4 gap-3">
+            <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100">
+              <p className="text-3xl font-black text-purple-600">1</p>
+              <p className="text-xs font-bold text-purple-700 mt-1">Games</p>
             </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold">{dailyStats?.won ? '100%' : '0%'}</p>
-              <p className="text-xs text-gray-600">Win Rate</p>
+            <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-green-50 to-green-100">
+              <p className="text-3xl font-black text-green-600">{dailyStats?.won ? '100%' : '0%'}</p>
+              <p className="text-xs font-bold text-green-700 mt-1">Win Rate</p>
             </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold">{dailyStats?.streak || 0}</p>
-              <p className="text-xs text-gray-600">Current Streak</p>
+            <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100">
+              <p className="text-3xl font-black text-orange-600 flex items-center justify-center">
+                {dailyStats?.streak || 0}
+                {(dailyStats?.streak || 0) > 0 && <span className="text-lg ml-1">🔥</span>}
+              </p>
+              <p className="text-xs font-bold text-orange-700 mt-1">Streak</p>
             </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold">{dailyStats?.score || 0}</p>
-              <p className="text-xs text-gray-600">Best Score</p>
+            <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100">
+              <p className="text-3xl font-black text-blue-600">{dailyStats?.score || 0}</p>
+              <p className="text-xs font-bold text-blue-700 mt-1">Best Score</p>
             </div>
           </div>
         </div>

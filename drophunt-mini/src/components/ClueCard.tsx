@@ -18,69 +18,137 @@ export const ClueCard: React.FC<ClueCardProps> = ({ clue, isRevealed, index }) =
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case 'easy':
-        return 'bg-green-100 text-green-800 border-green-200';
+        return {
+          bg: 'from-green-400 to-green-600',
+          badge: 'bg-green-500',
+          icon: '🌱',
+          points: '+10'
+        };
       case 'medium':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        return {
+          bg: 'from-yellow-400 to-orange-500',
+          badge: 'bg-yellow-500',
+          icon: '⚡',
+          points: '+20'
+        };
       case 'hard':
-        return 'bg-red-100 text-red-800 border-red-200';
+        return {
+          bg: 'from-red-400 to-pink-500',
+          badge: 'bg-red-500',
+          icon: '🔥',
+          points: '+30'
+        };
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+        return {
+          bg: 'from-gray-400 to-gray-600',
+          badge: 'bg-gray-500',
+          icon: '✨',
+          points: '+10'
+        };
     }
   };
   
   const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'category':
-        return '📦';
-      case 'brand':
-        return '🏷️';
-      case 'price':
-        return '💰';
-      case 'feature':
-        return '✨';
-      case 'rating':
-        return '⭐';
-      case 'location':
-        return '📍';
-      case 'style':
-        return '👗';
-      default:
-        return '🔍';
-    }
+    const icons: { [key: string]: { emoji: string; label: string } } = {
+      category: { emoji: '📦', label: 'Category' },
+      brand: { emoji: '🏷️', label: 'Brand' },
+      price: { emoji: '💰', label: 'Price' },
+      feature: { emoji: '✨', label: 'Feature' },
+      rating: { emoji: '⭐', label: 'Rating' },
+      location: { emoji: '📍', label: 'Location' },
+      style: { emoji: '🎨', label: 'Style' }
+    };
+    return icons[type] || { emoji: '🔍', label: 'Clue' };
   };
   
+  const difficultyInfo = getDifficultyColor(clue.difficulty);
+  const typeInfo = getTypeIcon(clue.type);
+  
   return (
-    <div className="mb-3">
+    <div className="relative">
       {isRevealed ? (
         <div 
-          className={`p-4 rounded-lg border-2 ${getDifficultyColor(clue.difficulty)} animate-slide-in`}
+          className="card-bubble bg-white relative overflow-hidden animate-bounce-in transform hover:scale-[1.02] transition-all"
           style={{
-            animationDelay: `${index * 100}ms`
+            animationDelay: `${index * 100}ms`,
+            padding: '20px'
           }}
         >
-          <div className="flex items-start justify-between mb-2">
+          {/* Gradient accent on left side */}
+          <div 
+            className={`absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-b ${difficultyInfo.bg}`}
+          />
+          
+          <div className="flex items-start justify-between mb-3 pl-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${difficultyInfo.bg} flex items-center justify-center shadow-md animate-wiggle-hover`}>
+                <span className="text-2xl">{typeInfo.emoji}</span>
+              </div>
+              <div>
+                <p className="text-xs font-black uppercase tracking-wider text-gray-600">
+                  Clue #{index + 1}
+                </p>
+                <p className="text-sm font-bold text-gray-800">
+                  {typeInfo.label}
+                </p>
+              </div>
+            </div>
+            
             <div className="flex items-center gap-2">
-              <span className="text-2xl">{getTypeIcon(clue.type)}</span>
-              <span className="text-xs font-semibold uppercase tracking-wider">
-                Clue {index + 1}
+              <span className={`${difficultyInfo.badge} text-white px-3 py-1 rounded-full text-xs font-black shadow-md`}>
+                {difficultyInfo.icon} {clue.difficulty.toUpperCase()}
+              </span>
+              <span className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-black shadow-md">
+                {difficultyInfo.points}
               </span>
             </div>
-            <span className="text-xs px-2 py-1 bg-white/50 rounded-full">
-              {clue.difficulty}
-            </span>
           </div>
-          <p className="text-sm font-medium leading-relaxed">
-            {clue.text}
-          </p>
+          
+          <div className="pl-4 pr-2">
+            <p className="text-base font-semibold text-gray-800 leading-relaxed">
+              {clue.text}
+            </p>
+          </div>
+          
+          {/* Fun decorative element */}
+          <div 
+            className={`absolute -bottom-2 -right-2 w-16 h-16 bg-gradient-to-br ${difficultyInfo.bg} rounded-full opacity-10`}
+          />
         </div>
       ) : (
-        <div className="p-4 bg-gray-100 rounded-lg border-2 border-gray-200">
-          <div className="flex items-center justify-center h-12">
-            <div className="flex gap-1">
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" />
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
-              <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }} />
+        <div className="card-bubble bg-gray-100 relative overflow-hidden hover:bg-gray-200 transition-all cursor-not-allowed">
+          <div className="flex items-center justify-center py-6">
+            <div className="text-center">
+              <div className="flex gap-2 justify-center mb-2">
+                <div className="w-3 h-3 bg-gray-400 rounded-full animate-pulse" />
+                <div className="w-3 h-3 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
+                <div className="w-3 h-3 bg-gray-400 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }} />
+              </div>
+              <p className="text-sm font-bold text-gray-500">
+                <span className="text-lg mr-1">🔒</span>
+                Clue #{index + 1} - Locked
+              </p>
+              <p className="text-xs text-gray-400 mt-1 font-semibold">
+                Reveal more clues to unlock
+              </p>
             </div>
+          </div>
+          
+          {/* Decorative locked pattern */}
+          <div className="absolute inset-0 opacity-5">
+            {[...Array(20)].map((_, i) => (
+              <span 
+                key={i} 
+                className="absolute text-4xl text-gray-600"
+                style={{
+                  left: `${(i % 5) * 25}%`,
+                  top: `${Math.floor(i / 5) * 25}%`,
+                  transform: 'rotate(-15deg)'
+                }}
+              >
+                🔒
+              </span>
+            ))}
           </div>
         </div>
       )}
