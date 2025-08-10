@@ -4,7 +4,6 @@ import { GameHeader } from './GameHeader';
 import { ClueCard } from './ClueCard';
 import { ProductReveal } from './ProductReveal';
 import { ShareModal } from './ShareModal';
-import { usePopularProducts } from '@shopify/shop-minis-react';
 
 export const Game: React.FC = () => {
   const {
@@ -16,12 +15,10 @@ export const Game: React.FC = () => {
     revealNextClue,
     makeGuess,
     updateProductImage,
-    updateProductShopifyId,
   } = useGameState();
   
   const [showShareModal, setShowShareModal] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
-  const { products } = usePopularProducts();
   
   // Log on every render
   console.log('🔄 Game component rendered:', {
@@ -30,9 +27,7 @@ export const Game: React.FC = () => {
     isLoading,
     hasPlayedAlready,
     isGameWon: gameState.isGameWon,
-    productsLoaded: products?.length || 0
   });
-  console.log('🛍️ Available products:', products);
   
   const handleRevealClue = () => {
     console.log('🎯 handleRevealClue clicked');
@@ -56,25 +51,15 @@ export const Game: React.FC = () => {
     console.log('🎯 Current product ID:', gameState.currentProduct?.id);
     
     setSelectedProductId(productId);
-    // For demo, make the first product the correct answer
-    const guessId = productId === products?.[0]?.id ? 'prod_demo' : productId;
-    console.log('🔍 Checking guess:', guessId);
+    console.log('🔍 Checking guess:', productId);
     
-    const isCorrect = await makeGuess(guessId);
+    const isCorrect = await makeGuess(productId);
     console.log('✅ Guess result:', isCorrect);
     
     if (isCorrect) {
-      // Update the product with real Shop data if we have it
-      const realProduct = products?.[0];
-      if (realProduct) {
-        // Update the product image
-        if (realProduct.featuredImage?.url) {
-          updateProductImage(realProduct.featuredImage.url);
-        }
-        // Store the real product ID for navigation
-        updateProductShopifyId(realProduct.id);
-        console.log('🛍️ Updated product with real Shopify ID:', realProduct.id);
-      }
+      // Update the product image with the tote bag image for consistency
+      updateProductImage('https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&h=400&fit=crop');
+      
       setTimeout(() => {
         setShowShareModal(true);
       }, 1500);
@@ -210,17 +195,46 @@ export const Game: React.FC = () => {
               </p>
             </div>
             
-            {(!products || products.length === 0) ? (
-              <div className="text-center py-12 card-bubble">
-                <span className="emoji-xl animate-float">📦</span>
-                <p className="text-lg font-bold text-gray-700 mt-4">Loading product suggestions...</p>
-                <p className="text-sm text-gray-500 mt-2 font-semibold">
-                  💡 Tip: Click the first product when it loads to win!
-                </p>
-              </div>
-            ) : (
+            {/* Use mock products for consistent demo experience */}
             <div className="grid grid-cols-2 gap-4">
-              {products?.slice(0, 6).map((product, index) => (
+              {[
+                { 
+                  id: 'prod_demo', 
+                  title: 'Organic Cotton Tote Bag', 
+                  vendor: 'EcoStyle Co',
+                  image: 'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&h=400&fit=crop'
+                },
+                { 
+                  id: 'prod_2', 
+                  title: 'Wireless Earbuds Pro', 
+                  vendor: 'TechGear',
+                  image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=400&fit=crop'
+                },
+                { 
+                  id: 'prod_3', 
+                  title: 'Bamboo Water Bottle', 
+                  vendor: 'GreenLife',
+                  image: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400&h=400&fit=crop'
+                },
+                { 
+                  id: 'prod_4', 
+                  title: 'Leather Wallet', 
+                  vendor: 'Craftsman Co',
+                  image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?w=400&h=400&fit=crop'
+                },
+                { 
+                  id: 'prod_5', 
+                  title: 'Ceramic Coffee Mug', 
+                  vendor: 'HomeStyle',
+                  image: 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=400&h=400&fit=crop'
+                },
+                { 
+                  id: 'prod_6', 
+                  title: 'Yoga Mat Premium', 
+                  vendor: 'FitZone',
+                  image: 'https://images.unsplash.com/photo-1601925260368-ae2f83cf8b7f?w=400&h=400&fit=crop'
+                },
+              ].map((product, index) => (
                 <button
                   key={product.id}
                   onClick={() => handleProductGuess(product.id)}
@@ -239,24 +253,22 @@ export const Game: React.FC = () => {
                   }}
                 >
                   <div className="aspect-square bg-gray-100 rounded-2xl mb-3 overflow-hidden">
-                    {(product as any).featuredImage?.url ? (
-                      <img 
-                        src={(product as any).featuredImage.url}
-                        alt={product.title}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          // Fallback to placeholder if image fails to load
-                          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/200x200/E5E7EB/6B7280?text=Product';
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
-                        <span className="emoji-xl opacity-50">🛍️</span>
-                      </div>
-                    )}
+                    <img 
+                      src={(product as any).image}
+                      alt={product.title}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        console.log('❌ Image failed to load:', (product as any).image);
+                        // Use a more attractive placeholder
+                        const colors = ['4F46E5', '10B981', 'F59E0B', 'EF4444', '8B5CF6', '06B6D4'];
+                        const color = colors[index % colors.length];
+                        (e.target as HTMLImageElement).src = `https://via.placeholder.com/400x400/${color}/ffffff?text=${encodeURIComponent(product.title.charAt(0))}`;
+                      }}
+                    />
                   </div>
                   <p className="text-sm font-black text-gray-800 truncate">{product.title}</p>
-                  <p className="text-xs text-gray-500 font-semibold">{(product as any).vendor || 'Shop'}</p>
+                  <p className="text-xs text-gray-500 font-semibold">{(product as any).vendor}</p>
                   {selectedProductId === product.id && (
                     <div className="absolute inset-0 bg-white/90 flex items-center justify-center rounded-3xl">
                       <div className="text-center">
@@ -268,7 +280,6 @@ export const Game: React.FC = () => {
                 </button>
               ))}
             </div>
-            )}
             
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600 font-semibold">

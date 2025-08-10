@@ -64,28 +64,30 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
       </div>
       
       {/* Status banner */}
-      <div className="card-bubble bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+      <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4 rounded-3xl shadow-xl animate-slide-up" style={{ animationDelay: '0.1s' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="emoji-lg animate-float">
-              {isGameWon ? '🎉' : todayPlayed ? '🎮' : '✨'}
+              {isGameWon ? '🎉' : todayPlayed ? '🎮' : '⏰'}
             </span>
             <div>
               <p className="text-xl font-black">
                 {todayPlayed 
                   ? (isGameWon ? "Victory! You solved today's mystery! 🏆" : "Let's solve today's mystery!")
-                  : "Ready for today's challenge?"}
+                  : "You've already played today!"}
               </p>
               <p className="text-sm font-semibold opacity-90">
-                {isGameWon 
-                  ? "Share your score with friends!" 
-                  : "Use clues wisely to maximize your score"}
+                {todayPlayed
+                  ? (isGameWon 
+                    ? "Share your score with friends!" 
+                    : "Use clues wisely to maximize your score")
+                  : "Come back tomorrow for a new challenge"}
               </p>
             </div>
           </div>
           
           {/* Achievement badges */}
-          {isGameWon && (
+          {isGameWon && todayPlayed && (
             <div className="flex gap-2">
               <span className="badge badge-success animate-bounce-in" style={{ animationDelay: '0.2s' }}>
                 SOLVED
@@ -105,11 +107,11 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
       </div>
       
       {/* Daily challenge info */}
-      {!todayPlayed && (
+      {todayPlayed && !isGameWon && (
         <div className="mascot-bubble mt-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
           <p className="text-lg font-bold text-gray-800">
             <span className="text-2xl mr-2">👋</span>
-            Welcome back! Today's mystery product is waiting for you!
+            Ready to solve today's mystery? Start by revealing clues!
           </p>
         </div>
       )}

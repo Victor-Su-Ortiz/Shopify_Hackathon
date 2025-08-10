@@ -141,23 +141,23 @@ export const ProductReveal: React.FC<ProductRevealProps> = ({
           )}
           
           {/* Stats cards */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            <div className="card-bubble text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100">
-              <p className="text-3xl font-black text-purple-600">{score}</p>
-              <p className="text-xs font-bold text-purple-700 mt-1">SCORE</p>
-              <span className="text-2xl">🏆</span>
+          <div className="grid grid-cols-3 gap-2 mb-6">
+            <div className="card-bubble text-center px-2 py-3 bg-gradient-to-br from-purple-50 to-purple-100 min-h-[90px] flex flex-col justify-center">
+              <span className="text-lg">🏆</span>
+              <p className="text-xl font-black text-purple-600 whitespace-nowrap">{score}</p>
+              <p className="text-xs font-bold text-purple-700">SCORE</p>
             </div>
-            <div className="card-bubble text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100">
-              <p className="text-3xl font-black text-blue-600">{attempts}</p>
-              <p className="text-xs font-bold text-blue-700 mt-1">CLUES</p>
-              <span className="text-2xl">🔍</span>
+            <div className="card-bubble text-center px-2 py-3 bg-gradient-to-br from-blue-50 to-blue-100 min-h-[90px] flex flex-col justify-center">
+              <span className="text-lg">🔍</span>
+              <p className="text-xl font-black text-blue-600 whitespace-nowrap">{attempts}</p>
+              <p className="text-xs font-bold text-blue-700">CLUES</p>
             </div>
-            <div className="card-bubble text-center p-4 bg-gradient-to-br from-green-50 to-green-100">
-              <p className="text-3xl font-black text-green-600">
-                {timeToSolve ? formatTime(timeToSolve) : '--'}
+            <div className="card-bubble text-center px-2 py-3 bg-gradient-to-br from-green-50 to-green-100 min-h-[90px] flex flex-col justify-center">
+              <span className="text-lg">⏱️</span>
+              <p className="text-sm font-black text-green-600 whitespace-nowrap">
+                {timeToSolve ? formatTime(timeToSolve) : '--:--'}
               </p>
-              <p className="text-xs font-bold text-green-700 mt-1">TIME</p>
-              <span className="text-2xl">⏱️</span>
+              <p className="text-xs font-bold text-green-700">TIME</p>
             </div>
           </div>
           
@@ -176,24 +176,29 @@ export const ProductReveal: React.FC<ProductRevealProps> = ({
                 console.log('🛍️ View in Shop clicked:', product.id);
                 
                 try {
-                  // Use the real Shopify ID if available, otherwise use the demo ID
+                  // For demo products, show a friendly message
+                  if (product.id === 'prod_demo') {
+                    // Show demo message
+                    const message = document.createElement('div');
+                    message.className = 'fixed top-4 right-4 bg-blue-500 text-white px-6 py-3 rounded-full shadow-xl z-50 animate-slide-down font-bold';
+                    message.innerHTML = '<span class="mr-2">🛍️</span> Demo Product - In real app, this opens in Shop!';
+                    document.body.appendChild(message);
+                    setTimeout(() => message.remove(), 3000);
+                    
+                    console.log('📱 Demo product - navigation simulated');
+                    return;
+                  }
+                  
+                  // Use the real Shopify ID if available
                   let productGid = product.shopifyId || product.id;
                   
                   // Check if it's already a GID format
                   if (!productGid.startsWith('gid://')) {
-                    // For demo purposes, create a mock GID
-                    // In production, this would be a real Shopify product GID
+                    // Create a proper Shopify GID
                     productGid = `gid://shopify/Product/${productGid}`;
                   }
                   
                   console.log('📱 Navigating to product GID:', productGid);
-                  console.log('Product details:', {
-                    title: product.title,
-                    vendor: product.vendor,
-                    price: product.price,
-                    shopifyId: product.shopifyId,
-                    demoId: product.id
-                  });
                   
                   // Use the official Shop navigation if available
                   if (shopNavigation?.navigateToProduct) {
@@ -201,25 +206,22 @@ export const ProductReveal: React.FC<ProductRevealProps> = ({
                       productId: productGid 
                     });
                     console.log('✅ Navigation call successful');
+                    
+                    // Show success feedback
+                    const message = document.createElement('div');
+                    message.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-full shadow-xl z-50 animate-slide-down font-bold';
+                    message.innerHTML = '<span class="mr-2">✨</span> Opening in Shop...';
+                    document.body.appendChild(message);
+                    setTimeout(() => message.remove(), 2000);
                   } else {
-                    console.warn('⚠️ Shop navigation not available, trying fallback...');
-                    // Fallback: Try to open in a new window/tab
-                    if (window.parent !== window) {
-                      // We're in an iframe, send message to parent
-                      window.parent.postMessage({
-                        type: 'shop:navigate',
-                        action: 'viewProduct',
-                        productId: productGid
-                      }, '*');
-                    }
+                    console.warn('⚠️ Shop navigation not available');
+                    // Show demo message for development
+                    const message = document.createElement('div');
+                    message.className = 'fixed top-4 right-4 bg-yellow-500 text-white px-6 py-3 rounded-full shadow-xl z-50 animate-slide-down font-bold';
+                    message.innerHTML = '<span class="mr-2">⚠️</span> Shop navigation not available in dev mode';
+                    document.body.appendChild(message);
+                    setTimeout(() => message.remove(), 3000);
                   }
-                  
-                  // Show success feedback
-                  const message = document.createElement('div');
-                  message.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-full shadow-xl z-50 animate-slide-down font-bold';
-                  message.innerHTML = '<span class="mr-2">✨</span> Opening in Shop...';
-                  document.body.appendChild(message);
-                  setTimeout(() => message.remove(), 2000);
                   
                 } catch (error) {
                   console.error('❌ Navigation error:', error);

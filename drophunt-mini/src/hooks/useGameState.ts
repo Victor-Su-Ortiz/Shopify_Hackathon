@@ -27,7 +27,7 @@ export const useGameState = () => {
     id: 'prod_demo',
     title: 'Organic Cotton Tote Bag',
     vendor: 'EcoStyle Co',
-    image: 'https://via.placeholder.com/400x400/4F46E5/ffffff?text=Mystery+Product',
+    image: 'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&h=400&fit=crop',
     price: '$32.00',
     description: 'Sustainable and stylish everyday carry',
     category: 'Accessories',
@@ -90,7 +90,7 @@ export const useGameState = () => {
           id: 'prod_demo',  // Fixed ID for demo
           title: 'Organic Cotton Tote Bag',
           vendor: 'EcoStyle Co',
-          image: 'https://via.placeholder.com/400x400/4F46E5/ffffff?text=Mystery+Product',
+          image: 'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=400&h=400&fit=crop',
           price: '$32.00',
           description: 'Sustainable and stylish everyday carry',
           category: 'Accessories',
