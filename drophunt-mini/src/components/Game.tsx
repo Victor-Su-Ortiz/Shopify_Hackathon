@@ -15,6 +15,7 @@ export const Game: React.FC = () => {
     hasPlayedAlready,
     revealNextClue,
     makeGuess,
+    updateProductImage,
   } = useGameState();
   
   const [showShareModal, setShowShareModal] = useState(false);
@@ -27,8 +28,10 @@ export const Game: React.FC = () => {
     totalClues: clues.length,
     isLoading,
     hasPlayedAlready,
-    isGameWon: gameState.isGameWon
+    isGameWon: gameState.isGameWon,
+    productsLoaded: products?.length || 0
   });
+  console.log('🛍️ Available products:', products);
   
   const handleRevealClue = () => {
     console.log('🎯 handleRevealClue clicked');
@@ -48,12 +51,22 @@ export const Game: React.FC = () => {
   };
   
   const handleProductGuess = async (productId: string) => {
+    console.log('🎲 Product guess clicked:', productId);
+    console.log('🎯 Current product ID:', gameState.currentProduct?.id);
+    
     setSelectedProductId(productId);
     // For demo, make the first product the correct answer
     const guessId = productId === products?.[0]?.id ? 'prod_demo' : productId;
+    console.log('🔍 Checking guess:', guessId);
+    
     const isCorrect = await makeGuess(guessId);
+    console.log('✅ Guess result:', isCorrect);
     
     if (isCorrect) {
+      // Update the product image if we have a real product
+      if (products?.[0]?.featuredImage?.url) {
+        updateProductImage(products[0].featuredImage.url);
+      }
       setTimeout(() => {
         setShowShareModal(true);
       }, 1500);
@@ -149,29 +162,57 @@ export const Game: React.FC = () => {
         {!gameState.isGameWon && gameState.cluesRevealed > 0 && (
           <div className="mb-6">
             <h2 className="text-lg font-bold mb-4">Make Your Guess</h2>
+            {(!products || products.length === 0) ? (
+              <div className="text-center py-8">
+                <p className="text-gray-600">Loading product suggestions...</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  (For demo: Click the first product when it loads to win!)
+                </p>
+              </div>
+            ) : (
             <div className="grid grid-cols-2 gap-3">
               {products?.slice(0, 6).map((product) => (
                 <button
                   key={product.id}
                   onClick={() => handleProductGuess(product.id)}
-                  disabled={hasPlayedAlready}
+                  disabled={gameState.isGameWon}
                   className={`
-                    p-3 rounded-lg border-2 transition-all
+                    p-3 rounded-lg border-2 transition-all overflow-hidden
                     ${selectedProductId === product.id 
-                      ? 'border-purple-600 bg-purple-50' 
+                      ? 'border-purple-600 bg-purple-50 ring-2 ring-purple-400' 
                       : 'border-gray-200 bg-white hover:border-purple-400'
                     }
-                    disabled:opacity-50 disabled:cursor-not-allowed
+                    ${gameState.isGameWon ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                   `}
                 >
-                  <div className="aspect-square bg-gray-100 rounded mb-2">
-                    {/* Product image would go here */}
+                  <div className="aspect-square bg-gray-100 rounded mb-2 overflow-hidden">
+                    {(product as any).featuredImage?.url ? (
+                      <img 
+                        src={(product as any).featuredImage.url}
+                        alt={product.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback to placeholder if image fails to load
+                          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/200x200/E5E7EB/6B7280?text=Product';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <span className="text-3xl">🛒</span>
+                      </div>
+                    )}
                   </div>
                   <p className="text-sm font-medium truncate">{product.title}</p>
                   <p className="text-xs text-gray-600">{(product as any).vendor || 'Shop'}</p>
+                  {selectedProductId === product.id && (
+                    <div className="mt-2 text-xs text-purple-600 font-semibold">
+                      Checking...
+                    </div>
+                  )}
                 </button>
               ))}
             </div>
+            )}
             
             <div className="mt-4 text-center">
               <p className="text-sm text-gray-600">

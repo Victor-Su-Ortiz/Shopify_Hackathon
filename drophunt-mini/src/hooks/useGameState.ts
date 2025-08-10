@@ -78,7 +78,7 @@ export const useGameState = () => {
         
         if (savedStats) {
           const stats: DailyStats = JSON.parse(savedStats);
-          if (stats.date === todaySeed && stats.played) {
+          if (stats.date === todaySeed && stats.played && stats.won) {
             setHasPlayedAlready(true);
             setDailyStats(stats);
           }
@@ -87,7 +87,7 @@ export const useGameState = () => {
         // For demo purposes, create a mock product
         // In production, this would fetch from Shop's catalog
         const mockProduct: Product = {
-          id: 'prod_' + todaySeed,
+          id: 'prod_demo',  // Fixed ID for demo
           title: 'Organic Cotton Tote Bag',
           vendor: 'EcoStyle Co',
           image: 'https://via.placeholder.com/400x400/4F46E5/ffffff?text=Mystery+Product',
@@ -173,14 +173,22 @@ export const useGameState = () => {
   
   // Make a guess
   const makeGuess = useCallback(async (guessedProductId: string) => {
-    if (!gameState.currentProduct || gameState.isGameWon) return false;
+    console.log('🎯 makeGuess called with:', guessedProductId);
+    console.log('📦 Current product:', gameState.currentProduct?.id);
+    console.log('🏆 Game already won?', gameState.isGameWon);
+    
+    if (!gameState.currentProduct || gameState.isGameWon) {
+      console.log('❌ Cannot make guess - no product or game already won');
+      return false;
+    }
     
     const isCorrect = guessedProductId === gameState.currentProduct.id;
+    console.log('🎲 Comparison:', guessedProductId, '===', gameState.currentProduct.id, '=', isCorrect);
     
     if (isCorrect) {
       const endTime = Date.now();
       const timeToSolve = Math.floor((endTime - gameState.startTime) / 1000);
-      const score = calculateScore(gameState.attempts, timeToSolve);
+      const score = calculateScore(gameState.cluesRevealed, timeToSolve);
       
       const newGameState = {
         ...gameState,
@@ -196,7 +204,7 @@ export const useGameState = () => {
         date: getTodaysSeed(),
         played: true,
         won: true,
-        attempts: gameState.attempts,
+        attempts: gameState.cluesRevealed,
         timeToSolve,
         score,
         streak: 1, // Calculate actual streak in production
@@ -233,6 +241,20 @@ export const useGameState = () => {
     setHasPlayedAlready(false);
   }, [storage]);
   
+  // Update product image when correct guess is made
+  const updateProductImage = useCallback((imageUrl: string) => {
+    setGameState(prev => {
+      if (!prev.currentProduct) return prev;
+      return {
+        ...prev,
+        currentProduct: {
+          ...prev.currentProduct,
+          image: imageUrl
+        }
+      };
+    });
+  }, []);
+  
   return {
     gameState,
     dailyStats,
@@ -242,5 +264,6 @@ export const useGameState = () => {
     revealNextClue,
     makeGuess,
     resetGame,
+    updateProductImage,
   };
 };

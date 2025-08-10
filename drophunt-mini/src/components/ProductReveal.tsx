@@ -110,9 +110,38 @@ export const ProductReveal: React.FC<ProductRevealProps> = ({
               <span>📤</span> Share Score
             </button>
             <button
-              className="flex-1 bg-gray-200 text-gray-800 px-6 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+              onClick={() => {
+                // Navigate to product in Shop app
+                console.log('🛍️ View in Shop clicked:', product.id);
+                
+                // Try to use window.postMessage for Shop Mini navigation
+                if (window.parent !== window) {
+                  window.parent.postMessage({
+                    type: 'shop:navigate',
+                    action: 'viewProduct',
+                    productId: product.id,
+                    productTitle: product.title
+                  }, '*');
+                }
+                
+                // For demo/development, show a confirmation
+                console.log(`📱 Opening product in Shop:
+                  Title: ${product.title}
+                  ID: ${product.id}
+                  Vendor: ${product.vendor}
+                  Price: ${product.price}`);
+                
+                // In production, the Shop app would handle this navigation
+                // For now, we'll show a nice feedback message
+                const message = document.createElement('div');
+                message.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-slide-in-right';
+                message.textContent = '✨ Opening in Shop...';
+                document.body.appendChild(message);
+                setTimeout(() => message.remove(), 2000);
+              }}
+              className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg flex items-center justify-center gap-2"
             >
-              View in Shop
+              <span>🛍️</span> View in Shop
             </button>
           </div>
           
