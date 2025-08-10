@@ -1,0 +1,7 @@
+{
+  "name": "DropHunt",
+  "permissions": ["useAsyncStorage", "useSecureStorage"],
+  "privacy_policy_url": "https://drophunt.shop/privacy",
+  "terms_url": "https://drophunt.shop/terms",
+  "description": "Daily mystery drops game - solve clues to discover exclusive products!"
+}
