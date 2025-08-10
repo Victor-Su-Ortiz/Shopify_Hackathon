@@ -10,6 +10,8 @@ const STORAGE_KEYS = {
 };
 
 export const useGameState = () => {
+  console.log('🚀 useGameState hook initializing - VERSION 2.0');
+  
   // Initialize with default clues immediately
   const defaultClues: Clue[] = [
     { id: 1, text: 'This item belongs to the Accessories category', type: 'category', difficulty: 'easy' },
@@ -18,6 +20,8 @@ export const useGameState = () => {
     { id: 4, text: 'This brand hails from Los Angeles, CA', type: 'location', difficulty: 'medium' },
     { id: 5, text: 'An eco-conscious choice for sustainable shoppers', type: 'feature', difficulty: 'medium' },
   ];
+  
+  console.log('📋 Default clues created:', defaultClues.length, 'clues');
   
   const mockProduct: Product = {
     id: 'prod_demo',
@@ -33,12 +37,19 @@ export const useGameState = () => {
     location: 'Los Angeles, CA',
   };
   
+  console.log('📦 Mock product created:', mockProduct.title);
+  
   const [gameState, setGameState] = useState<GameState>({
     currentProduct: mockProduct,  // Start with product loaded
     cluesRevealed: 1,  // Start with first clue already revealed
     isGameWon: false,
     attempts: 0,
     startTime: Date.now(),
+  });
+  
+  console.log('🎮 Initial game state:', {
+    hasProduct: !!gameState.currentProduct,
+    cluesRevealed: gameState.cluesRevealed
   });
   
   const [dailyStats, setDailyStats] = useState<DailyStats | null>(null);
@@ -48,7 +59,17 @@ export const useGameState = () => {
   
   const storage = useAsyncStorage();
   
-  // Load saved game state
+  // Log state changes
+  useEffect(() => {
+    console.log('📈 Game state changed:', {
+      cluesRevealed: gameState.cluesRevealed,
+      isGameWon: gameState.isGameWon,
+      attempts: gameState.attempts,
+      hasProduct: !!gameState.currentProduct
+    });
+  }, [gameState]);
+  
+  // Load saved game state - only run once on mount
   useEffect(() => {
     const loadGameState = async () => {
       try {
@@ -79,13 +100,23 @@ export const useGameState = () => {
           location: 'Los Angeles, CA',
         };
         
-        setGameState(prev => ({
-          ...prev,
-          currentProduct: mockProduct,
-          cluesRevealed: 0,  // Explicitly set to 0
-          isGameWon: false,
-          attempts: 0,
-        }));
+        // Only reset state if we don't have a product yet
+        setGameState(prev => {
+          if (!prev.currentProduct) {
+            return {
+              ...prev,
+              currentProduct: mockProduct,
+              cluesRevealed: 1,  // Keep initial clue revealed
+              isGameWon: false,
+              attempts: 0,
+            };
+          }
+          // If product exists, just update it without resetting progress
+          return {
+            ...prev,
+            currentProduct: mockProduct,
+          };
+        });
         
         // Generate clues for the product
         const generatedClues = generateClues(mockProduct);
@@ -99,23 +130,46 @@ export const useGameState = () => {
     };
     
     loadGameState();
-  }, [storage]);
+  }, []); // Empty dependency array - only run once on mount
   
   // Reveal next clue
   const revealNextClue = useCallback(() => {
+    console.log('🔍 revealNextClue called');
+    console.log('Current clues array:', clues);
+    console.log('Current clues length:', clues.length);
+    console.log('Current gameState:', gameState);
+    
     setGameState(prev => {
+      console.log('📊 Inside setState - Previous state:', {
+        cluesRevealed: prev.cluesRevealed,
+        isGameWon: prev.isGameWon,
+        attempts: prev.attempts
+      });
+      
       const maxClues = Math.max(clues.length, 5);
+      console.log('Max clues allowed:', maxClues);
       
       if (prev.cluesRevealed < maxClues && !prev.isGameWon) {
-        return {
+        const newState = {
           ...prev,
           cluesRevealed: prev.cluesRevealed + 1,
           attempts: prev.attempts + 1,
         };
+        console.log('✅ Updating state to:', {
+          cluesRevealed: newState.cluesRevealed,
+          attempts: newState.attempts
+        });
+        return newState;
       }
+      
+      console.log('❌ No state update - conditions not met');
+      console.log('Reason:', {
+        'cluesRevealed >= maxClues': prev.cluesRevealed >= maxClues,
+        'isGameWon': prev.isGameWon
+      });
       return prev;
     });
-  }, [clues]);
+  }, [clues, gameState]);
   
   // Make a guess
   const makeGuess = useCallback(async (guessedProductId: string) => {

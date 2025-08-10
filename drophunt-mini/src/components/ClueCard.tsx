@@ -8,6 +8,13 @@ interface ClueCardProps {
 }
 
 export const ClueCard: React.FC<ClueCardProps> = ({ clue, isRevealed, index }) => {
+  // Log when card renders
+  console.log(`🃏 ClueCard ${index + 1} rendered:`, {
+    clueId: clue.id,
+    isRevealed,
+    clueText: isRevealed ? clue.text : 'Hidden'
+  });
+  
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case 'easy':

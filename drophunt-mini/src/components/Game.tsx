@@ -21,9 +21,29 @@ export const Game: React.FC = () => {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const { products } = usePopularProducts();
   
+  // Log on every render
+  console.log('🔄 Game component rendered:', {
+    cluesRevealed: gameState.cluesRevealed,
+    totalClues: clues.length,
+    isLoading,
+    hasPlayedAlready,
+    isGameWon: gameState.isGameWon
+  });
+  
   const handleRevealClue = () => {
+    console.log('🎯 handleRevealClue clicked');
+    console.log('Game state:', {
+      isGameWon: gameState.isGameWon,
+      cluesRevealed: gameState.cluesRevealed,
+      currentProduct: gameState.currentProduct
+    });
+    console.log('Available clues:', clues);
+    
     if (!gameState.isGameWon) {
+      console.log('📢 Calling revealNextClue()');
       revealNextClue();
+    } else {
+      console.log('❌ Game already won, not revealing clue');
     }
   };
   
@@ -90,7 +110,14 @@ export const Game: React.FC = () => {
               <h2 className="text-lg font-bold">Clues ({gameState.cluesRevealed}/{clues.length})</h2>
               {gameState.cluesRevealed < clues.length && (
                 <button
-                  onClick={() => revealNextClue()}
+                  onClick={() => {
+                    console.log('🔘 Button clicked directly!');
+                    console.log('Current state before click:', {
+                      cluesRevealed: gameState.cluesRevealed,
+                      cluesLength: clues.length
+                    });
+                    handleRevealClue();
+                  }}
                   className="bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-colors flex items-center gap-2"
                 >
                   <span>🔍</span> Reveal Next Clue
@@ -99,14 +126,21 @@ export const Game: React.FC = () => {
             </div>
             
             <div className="space-y-2">
-              {clues.map((clue, index) => (
-                <ClueCard
-                  key={clue.id}
-                  clue={clue}
-                  isRevealed={index < gameState.cluesRevealed}
-                  index={index}
-                />
-              ))}
+              {clues.map((clue, index) => {
+                console.log(`🗺️ Mapping clue ${index + 1}:`, {
+                  shouldReveal: index < gameState.cluesRevealed,
+                  cluesRevealed: gameState.cluesRevealed,
+                  index
+                });
+                return (
+                  <ClueCard
+                    key={clue.id}
+                    clue={clue}
+                    isRevealed={index < gameState.cluesRevealed}
+                    index={index}
+                  />
+                );
+              })}
             </div>
           </div>
         )}
