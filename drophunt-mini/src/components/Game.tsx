@@ -304,23 +304,23 @@ export const Game: React.FC = () => {
             <h3 className="text-2xl font-black text-gray-800">Your Stats</h3>
           </div>
           <div className="grid grid-cols-4 gap-3">
-            <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 overflow-hidden">
-              <p className="text-2xl font-black text-purple-600">1</p>
+            <div className="text-center p-2 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 min-h-[80px] flex flex-col justify-center">
+              <p className="text-xl font-black text-purple-600">1</p>
               <p className="text-xs font-bold text-purple-700 mt-1">Games</p>
             </div>
-            <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-green-50 to-green-100 overflow-hidden">
-              <p className="text-2xl font-black text-green-600">{dailyStats?.won ? '100%' : '0%'}</p>
+            <div className="text-center p-2 rounded-2xl bg-gradient-to-br from-green-50 to-green-100 min-h-[80px] flex flex-col justify-center">
+              <p className="text-lg font-black text-green-600">{dailyStats?.won ? '100%' : '0%'}</p>
               <p className="text-xs font-bold text-green-700 mt-1">Win Rate</p>
             </div>
-            <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 overflow-hidden">
+            <div className="text-center p-2 rounded-2xl bg-gradient-to-br from-orange-50 to-orange-100 min-h-[80px] flex flex-col justify-center">
               <div className="flex items-center justify-center gap-1">
-                <p className="text-2xl font-black text-orange-600">{dailyStats?.streak || 0}</p>
-                {(dailyStats?.streak || 0) > 0 && <span className="text-lg">🔥</span>}
+                <p className="text-xl font-black text-orange-600">{dailyStats?.streak || 0}</p>
+                {(dailyStats?.streak || 0) > 0 && <span className="text-sm">🔥</span>}
               </div>
               <p className="text-xs font-bold text-orange-700 mt-1">Streak</p>
             </div>
-            <div className="text-center p-3 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 overflow-hidden">
-              <p className="text-2xl font-black text-blue-600">{dailyStats?.score || 0}</p>
+            <div className="text-center p-2 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 min-h-[80px] flex flex-col justify-center">
+              <p className="text-xl font-black text-blue-600">{dailyStats?.score || 0}</p>
               <p className="text-xs font-bold text-blue-700 mt-1">Best Score</p>
             </div>
           </div>
