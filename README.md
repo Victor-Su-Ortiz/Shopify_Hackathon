@@ -1,5 +1,3 @@
-# Shopify_Hackathon
-
 # 🎯 What is DropHunt Mini Game?
 
 **DropHunt** is a Wordle-inspired daily product discovery game built as a Shopify Shop Mini.  
