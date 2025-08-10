@@ -14,6 +14,60 @@ const STORAGE_KEYS = {
   USER_STATS: 'drophunt_user_stats',
 };
 
+// Mock products for development/fallback
+const MOCK_PRODUCTS = [
+  {
+    id: 'gid://shopify/Product/1',
+    title: 'Organic Cotton Tote Bag',
+    vendor: 'EcoStyle Co',
+    productType: 'Accessories',
+    tags: ['sustainable', 'organic', 'everyday'],
+    featuredImage: { url: 'https://picsum.photos/400/400?random=1' },
+    priceRange: { minVariantPrice: { amount: '32.00', currencyCode: 'USD' } },
+    description: 'Sustainable and stylish everyday carry'
+  },
+  {
+    id: 'gid://shopify/Product/2',
+    title: 'Wireless Bluetooth Headphones',
+    vendor: 'TechSound Pro',
+    productType: 'Electronics',
+    tags: ['wireless', 'bluetooth', 'music'],
+    featuredImage: { url: 'https://picsum.photos/400/400?random=2' },
+    priceRange: { minVariantPrice: { amount: '89.99', currencyCode: 'USD' } },
+    description: 'Premium sound quality with active noise cancellation'
+  },
+  {
+    id: 'gid://shopify/Product/3',
+    title: 'Artisan Coffee Blend',
+    vendor: 'Roast Masters',
+    productType: 'Food & Beverage',
+    tags: ['coffee', 'organic', 'fair-trade'],
+    featuredImage: { url: 'https://picsum.photos/400/400?random=3' },
+    priceRange: { minVariantPrice: { amount: '18.50', currencyCode: 'USD' } },
+    description: 'Single-origin, ethically sourced premium coffee'
+  },
+  {
+    id: 'gid://shopify/Product/4',
+    title: 'Minimalist Leather Wallet',
+    vendor: 'Craft & Co',
+    productType: 'Accessories',
+    tags: ['leather', 'minimalist', 'handmade'],
+    featuredImage: { url: 'https://picsum.photos/400/400?random=4' },
+    priceRange: { minVariantPrice: { amount: '45.00', currencyCode: 'USD' } },
+    description: 'Handcrafted genuine leather slim wallet'
+  },
+  {
+    id: 'gid://shopify/Product/5',
+    title: 'Plant-Based Protein Powder',
+    vendor: 'NutriLife',
+    productType: 'Health & Wellness',
+    tags: ['vegan', 'protein', 'fitness'],
+    featuredImage: { url: 'https://picsum.photos/400/400?random=5' },
+    priceRange: { minVariantPrice: { amount: '54.99', currencyCode: 'USD' } },
+    description: 'Complete protein blend from organic plant sources'
+  }
+];
+
 export const useGameState = () => {
   console.log('🚀 useGameState hook initializing - VERSION 3.0 with Real Shop Data');
   
@@ -21,7 +75,7 @@ export const useGameState = () => {
   
   // Get real products from Shop catalog
   // @ts-ignore - SDK type definition may be incomplete
-  const { products, loading: productsLoading } = useProducts({} as any);
+  const { products: sdkProducts, loading: sdkLoading } = useProducts({} as any) || {};
   
   // Get current user for personalization
   // @ts-ignore - SDK type definition may be incomplete
@@ -30,6 +84,16 @@ export const useGameState = () => {
   // Get user's saved products for personalization
   // @ts-ignore - SDK type definition may be incomplete
   const savedProducts = useSavedProducts() as any;
+  
+  // Use SDK products if available, otherwise use mock products
+  const products = sdkProducts && sdkProducts.length > 0 ? sdkProducts : MOCK_PRODUCTS;
+  const productsLoading = sdkLoading && !products;
+  
+  console.log('📦 Products status:', {
+    sdkProducts: sdkProducts?.length || 0,
+    usingMockData: !sdkProducts || sdkProducts.length === 0,
+    totalProducts: products?.length || 0
+  });
   
   const [gameState, setGameState] = useState<GameState>({
     currentProduct: null,
@@ -43,6 +107,18 @@ export const useGameState = () => {
   const [clues, setClues] = useState<Clue[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasPlayedAlready, setHasPlayedAlready] = useState(false);
+  
+  // Force loading to finish after timeout
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (isLoading) {
+        console.log('⚠️ Loading timeout - forcing completion');
+        setIsLoading(false);
+      }
+    }, 3000); // 3 second timeout
+    
+    return () => clearTimeout(timeout);
+  }, [isLoading]);
   
   // Convert Shop product to our Product type
   const convertShopProduct = useCallback((shopProduct: any): Product => {
@@ -81,7 +157,10 @@ export const useGameState = () => {
   
   // Select today's product based on date seed
   const todaysProduct = useMemo(() => {
-    if (!products || products.length === 0) return null;
+    if (!products || products.length === 0) {
+      console.log('⚠️ No products available');
+      return null;
+    }
     
     const seed = getTodaysSeed();
     // Use seed to deterministically select a product
@@ -89,7 +168,27 @@ export const useGameState = () => {
     const productIndex = seedNum % products.length;
     
     const selectedProduct = products[productIndex];
-    return convertShopProduct(selectedProduct);
+    console.log('🎯 Selected product for today:', selectedProduct?.title || 'Unknown');
+    
+    try {
+      return convertShopProduct(selectedProduct);
+    } catch (error) {
+      console.error('Error converting product:', error);
+      // Return a basic fallback product structure
+      const fallbackProduct: Product = {
+        id: selectedProduct?.id || 'unknown',
+        shopifyId: selectedProduct?.id,
+        title: selectedProduct?.title || 'Mystery Product',
+        vendor: selectedProduct?.vendor || 'Unknown Brand',
+        image: selectedProduct?.featuredImage?.url || 'https://picsum.photos/400/400',
+        price: '$0.00',
+        description: selectedProduct?.description || 'A mysterious product awaits',
+        category: 'General',
+        tags: [],
+        rating: 4.5
+      };
+      return fallbackProduct;
+    }
   }, [products, convertShopProduct]);
   
   // Log state changes
@@ -106,7 +205,21 @@ export const useGameState = () => {
   // Load saved game state and set up today's product
   useEffect(() => {
     const loadGameState = async () => {
+      console.log('🔍 Loading game state...', {
+        hasTodaysProduct: !!todaysProduct,
+        productsLoading,
+        productsCount: products?.length || 0
+      });
+      
+      // If no products at all after initial load, set loading to false
+      if (!productsLoading && !todaysProduct) {
+        console.log('⚠️ No products available, showing fallback');
+        setIsLoading(false);
+        return;
+      }
+      
       if (!todaysProduct || productsLoading) {
+        console.log('⏳ Waiting for products to load...');
         return; // Wait for products to load
       }
       
