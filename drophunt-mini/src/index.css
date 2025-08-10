@@ -1,5 +1,5 @@
-@import "@shopify/shop-minis-react/styles";
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+@import "@shopify/shop-minis-react/styles";
 
 /* Root variables for Duolingo-inspired design */
 :root {
