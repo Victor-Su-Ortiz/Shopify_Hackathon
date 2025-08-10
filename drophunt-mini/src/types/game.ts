@@ -1,5 +1,6 @@
 export interface Product {
   id: string;
+  shopifyId?: string;  // Real Shopify product ID for navigation
   title: string;
   vendor: string;
   image: string;

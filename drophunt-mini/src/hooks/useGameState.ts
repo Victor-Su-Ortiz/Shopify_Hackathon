@@ -255,6 +255,20 @@ export const useGameState = () => {
     });
   }, []);
   
+  // Update product with real Shopify ID for navigation
+  const updateProductShopifyId = useCallback((shopifyId: string) => {
+    setGameState(prev => {
+      if (!prev.currentProduct) return prev;
+      return {
+        ...prev,
+        currentProduct: {
+          ...prev.currentProduct,
+          shopifyId: shopifyId
+        }
+      };
+    });
+  }, []);
+  
   return {
     gameState,
     dailyStats,
@@ -265,5 +279,6 @@ export const useGameState = () => {
     makeGuess,
     resetGame,
     updateProductImage,
+    updateProductShopifyId,
   };
 };

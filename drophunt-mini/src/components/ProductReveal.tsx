@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Product } from '../types/game';
 import { formatTime } from '../utils/gameUtils';
+import { useShopNavigation } from '@shopify/shop-minis-react';
 
 interface ProductRevealProps {
   product: Product;
@@ -21,6 +22,8 @@ export const ProductReveal: React.FC<ProductRevealProps> = ({
   onShare
 }) => {
   const [showConfetti, setShowConfetti] = useState(false);
+  const shopNavigation = useShopNavigation();
+  console.log('🧭 Shop Navigation available:', !!shopNavigation?.navigateToProduct);
   
   useEffect(() => {
     if (isRevealed) {
@@ -110,34 +113,66 @@ export const ProductReveal: React.FC<ProductRevealProps> = ({
               <span>📤</span> Share Score
             </button>
             <button
-              onClick={() => {
+              onClick={async () => {
                 // Navigate to product in Shop app
                 console.log('🛍️ View in Shop clicked:', product.id);
                 
-                // Try to use window.postMessage for Shop Mini navigation
-                if (window.parent !== window) {
-                  window.parent.postMessage({
-                    type: 'shop:navigate',
-                    action: 'viewProduct',
-                    productId: product.id,
-                    productTitle: product.title
-                  }, '*');
+                try {
+                  // Use the real Shopify ID if available, otherwise use the demo ID
+                  let productGid = product.shopifyId || product.id;
+                  
+                  // Check if it's already a GID format
+                  if (!productGid.startsWith('gid://')) {
+                    // For demo purposes, create a mock GID
+                    // In production, this would be a real Shopify product GID
+                    productGid = `gid://shopify/Product/${productGid}`;
+                  }
+                  
+                  console.log('📱 Navigating to product GID:', productGid);
+                  console.log('Product details:', {
+                    title: product.title,
+                    vendor: product.vendor,
+                    price: product.price,
+                    shopifyId: product.shopifyId,
+                    demoId: product.id
+                  });
+                  
+                  // Use the official Shop navigation if available
+                  if (shopNavigation?.navigateToProduct) {
+                    await shopNavigation.navigateToProduct({ 
+                      productId: productGid 
+                    });
+                    console.log('✅ Navigation call successful');
+                  } else {
+                    console.warn('⚠️ Shop navigation not available, trying fallback...');
+                    // Fallback: Try to open in a new window/tab
+                    if (window.parent !== window) {
+                      // We're in an iframe, send message to parent
+                      window.parent.postMessage({
+                        type: 'shop:navigate',
+                        action: 'viewProduct',
+                        productId: productGid
+                      }, '*');
+                    }
+                  }
+                  
+                  // Show success feedback
+                  const message = document.createElement('div');
+                  message.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-slide-in-right';
+                  message.textContent = '✨ Opening in Shop...';
+                  document.body.appendChild(message);
+                  setTimeout(() => message.remove(), 2000);
+                  
+                } catch (error) {
+                  console.error('❌ Navigation error:', error);
+                  
+                  // Show error feedback
+                  const message = document.createElement('div');
+                  message.className = 'fixed top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-slide-in-right';
+                  message.textContent = '⚠️ Could not open product';
+                  document.body.appendChild(message);
+                  setTimeout(() => message.remove(), 3000);
                 }
-                
-                // For demo/development, show a confirmation
-                console.log(`📱 Opening product in Shop:
-                  Title: ${product.title}
-                  ID: ${product.id}
-                  Vendor: ${product.vendor}
-                  Price: ${product.price}`);
-                
-                // In production, the Shop app would handle this navigation
-                // For now, we'll show a nice feedback message
-                const message = document.createElement('div');
-                message.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-slide-in-right';
-                message.textContent = '✨ Opening in Shop...';
-                document.body.appendChild(message);
-                setTimeout(() => message.remove(), 2000);
               }}
               className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg flex items-center justify-center gap-2"
             >

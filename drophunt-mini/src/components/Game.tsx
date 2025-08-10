@@ -16,6 +16,7 @@ export const Game: React.FC = () => {
     revealNextClue,
     makeGuess,
     updateProductImage,
+    updateProductShopifyId,
   } = useGameState();
   
   const [showShareModal, setShowShareModal] = useState(false);
@@ -63,9 +64,16 @@ export const Game: React.FC = () => {
     console.log('✅ Guess result:', isCorrect);
     
     if (isCorrect) {
-      // Update the product image if we have a real product
-      if (products?.[0]?.featuredImage?.url) {
-        updateProductImage(products[0].featuredImage.url);
+      // Update the product with real Shop data if we have it
+      const realProduct = products?.[0];
+      if (realProduct) {
+        // Update the product image
+        if (realProduct.featuredImage?.url) {
+          updateProductImage(realProduct.featuredImage.url);
+        }
+        // Store the real product ID for navigation
+        updateProductShopifyId(realProduct.id);
+        console.log('🛍️ Updated product with real Shopify ID:', realProduct.id);
       }
       setTimeout(() => {
         setShowShareModal(true);
